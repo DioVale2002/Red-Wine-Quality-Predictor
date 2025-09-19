@@ -92,7 +92,9 @@ def main():
             else:
                 st.warning("⚠️ **Not Good Wine** (Quality < 7)")
                 quality_text = "Not Good"
-            
+        except Exception as e:
+            st.error(f"❌ Error making prediction: {str(e)}")
+            st.write("Please check that your model file is in the correct location and format.") 
     # Make prediction
     if st.button("🔮 Predict Wine Quality", type="primary"):
         try:
