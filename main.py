@@ -156,19 +156,6 @@ def main():
             else:
                 st.error("**Low confidence prediction** - This result is uncertain. Recommend seeking expert evaluation or additional testing.")
             
-            # Display detailed probabilities
-            st.subheader("📊 Detailed Breakdown")
-            col1, col2 = st.columns(2)
-            with col1:
-                st.metric("Not Good (<7)", f"{prob_not_good:.1%}")
-                st.progress(prob_not_good)
-            
-            with col2:
-                st.metric("Very Good (≥7)", f"{prob_very_good:.1%}")
-                st.progress(prob_very_good)
-            
-            # Show the actual probabilities for transparency
-            st.caption(f"Raw probabilities: Not Good = {prob_not_good:.3f}, Very Good = {prob_very_good:.3f}")
             
             # Additional decision-making context
             with st.expander("🤔 How to Interpret This Confidence Score"):
