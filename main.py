@@ -68,7 +68,6 @@ def main():
     
     # Apply preprocessing if you have it
     if preprocessor:
-        st.info("✅ Applying feature scaling...")
         try:
             features = preprocessor.transform(features)
         except Exception as e:
