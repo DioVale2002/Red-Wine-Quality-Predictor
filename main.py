@@ -80,11 +80,55 @@ def main():
                 st.warning("⚠️ **Not Good Wine** (Quality < 7)")
                 quality_text = "Not Good"
             
-            # Display probabilities with a progress bar
-            st.subheader("📊 Confidence Levels")
+            # Calculate overall confidence score
             prob_not_good = prediction_proba[0][0]
             prob_very_good = prediction_proba[0][1]
+            confidence_score = max(prob_not_good, prob_very_good)
             
+            # Display confidence score prominently
+            st.subheader("🎯 Confidence Score")
+            
+            # Color-code confidence level
+            if confidence_score >= 0.8:
+                confidence_color = "green"
+                confidence_level = "Very High"
+                confidence_emoji = "🟢"
+            elif confidence_score >= 0.65:
+                confidence_color = "blue"
+                confidence_level = "High"
+                confidence_emoji = "🔵"
+            elif confidence_score >= 0.55:
+                confidence_color = "orange"
+                confidence_level = "Moderate"
+                confidence_emoji = "🟡"
+            else:
+                confidence_color = "red"
+                confidence_level = "Low"
+                confidence_emoji = "🔴"
+            
+            # Display confidence with visual indicators
+            col1, col2, col3 = st.columns([1, 2, 1])
+            with col2:
+                st.markdown(f"""
+                <div style="text-align: center; padding: 20px; border-radius: 10px; background-color: rgba(255,255,255,0.1);">
+                    <h2 style="color: {confidence_color};">{confidence_emoji} {confidence_score:.1%}</h2>
+                    <p style="font-size: 18px; margin: 0;"><strong>{confidence_level} Confidence</strong></p>
+                </div>
+                """, unsafe_allow_html=True)
+            
+            # Confidence interpretation
+            st.subheader("💡 Decision Support")
+            if confidence_score >= 0.8:
+                st.success("**Highly reliable prediction** - You can trust this result with high confidence.")
+            elif confidence_score >= 0.65:
+                st.info("**Good prediction reliability** - This result is quite trustworthy for decision-making.")
+            elif confidence_score >= 0.55:
+                st.warning("**Moderate reliability** - Consider additional factors or expert opinion before making critical decisions.")
+            else:
+                st.error("**Low confidence prediction** - This result is uncertain. Recommend seeking expert evaluation or additional testing.")
+            
+            # Display detailed probabilities
+            st.subheader("📊 Detailed Breakdown")
             col1, col2 = st.columns(2)
             with col1:
                 st.metric("Not Good (<7)", f"{prob_not_good:.1%}")
@@ -93,6 +137,21 @@ def main():
             with col2:
                 st.metric("Very Good (≥7)", f"{prob_very_good:.1%}")
                 st.progress(prob_very_good)
+            
+            # Additional decision-making context
+            with st.expander("🤔 How to Interpret This Confidence Score"):
+                st.markdown("""
+                **Confidence Score Explanation:**
+                - **80-100%**: Very High Confidence - The model is very certain about its prediction
+                - **65-79%**: High Confidence - The model is quite confident, good for most decisions
+                - **55-64%**: Moderate Confidence - The prediction has some uncertainty
+                - **Below 55%**: Low Confidence - The model is uncertain, consider additional evaluation
+                
+                **For Wine Quality Decisions:**
+                - **High confidence "Very Good"**: Excellent choice for special occasions or recommendations
+                - **High confidence "Not Good"**: Consider alternative wines or further evaluation
+                - **Low confidence results**: May benefit from professional sommelier assessment or additional chemical analysis
+                """)
                 
         except Exception as e:
             st.error(f"❌ Error making prediction: {str(e)}")
