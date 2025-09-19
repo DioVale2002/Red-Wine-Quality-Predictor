@@ -92,24 +92,6 @@ def main():
             else:
                 st.warning("⚠️ **Not Good Wine** (Quality < 7)")
                 quality_text = "Not Good"
-        except Exception as e:
-            st.error(f"❌ Error making prediction: {str(e)}")
-            st.write("Please check that your model file is in the correct location and format.") 
-    # Make prediction
-    if st.button("🔮 Predict Wine Quality", type="primary"):
-        try:
-            prediction = model.predict(features)
-            prediction_proba = model.predict_proba(features)
-            
-            st.subheader("🎯 Prediction Results")
-            
-            # Display prediction with styling
-            if prediction[0] == 1:
-                st.success("🌟 **Very Good Wine** (Quality ≥ 7)")
-                quality_text = "Very Good"
-            else:
-                st.warning("⚠️ **Not Good Wine** (Quality < 7)")
-                quality_text = "Not Good"
             
             # Try to get actual quality score if model supports it
             try:
