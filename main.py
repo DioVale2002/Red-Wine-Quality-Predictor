@@ -68,6 +68,7 @@ def main():
     
     # Apply preprocessing if you have it
     if preprocessor:
+        st.info("✅ Applying feature scaling...")
         try:
             features = preprocessor.transform(features)
         except Exception as e:
@@ -92,24 +93,56 @@ def main():
                 st.warning("⚠️ **Not Good Wine** (Quality < 7)")
                 quality_text = "Not Good"
             
-            # Calculate overall confidence score
+    # Make prediction
+    if st.button("🔮 Predict Wine Quality", type="primary"):
+        try:
+            prediction = model.predict(features)
+            prediction_proba = model.predict_proba(features)
+            
+            st.subheader("🎯 Prediction Results")
+            
+            # Display prediction with styling
+            if prediction[0] == 1:
+                st.success("🌟 **Very Good Wine** (Quality ≥ 7)")
+                quality_text = "Very Good"
+            else:
+                st.warning("⚠️ **Not Good Wine** (Quality < 7)")
+                quality_text = "Not Good"
+            
+            # Try to get actual quality score if model supports it
+            try:
+                # Some models might have a predict method that gives actual scores
+                if hasattr(model, 'predict_proba') and hasattr(model, 'classes_'):
+                    # For binary classification, estimate quality score
+                    prob_very_good = prediction_proba[0][1]
+                    # Estimate quality: if prob >= 0.5, quality likely 7+, else likely < 7
+                    estimated_quality = 6.0 + (prob_very_good * 3.0)  # Scale between 6-9
+                    st.info(f"📊 **Estimated Quality Score: {estimated_quality:.1f}/10**")
+                else:
+                    st.info("📊 Quality score estimation not available for this model type")
+            except:
+                st.info("📊 Quality score estimation not available")
+            
+            # Recalculate confidence using a better method
             prob_not_good = prediction_proba[0][0]
             prob_very_good = prediction_proba[0][1]
-            confidence_score = max(prob_not_good, prob_very_good)
+            
+            # Better confidence calculation: distance from decision boundary (0.5)
+            confidence_score = abs(prob_very_good - 0.5) * 2  # Scale to 0-1 range
             
             # Display confidence score prominently
             st.subheader("🎯 Confidence Score")
             
-            # Color-code confidence level
-            if confidence_score >= 0.8:
+            # Adjusted confidence thresholds for better user experience
+            if confidence_score >= 0.6:  # Was 0.8
                 confidence_color = "green"
                 confidence_level = "Very High"
                 confidence_emoji = "🟢"
-            elif confidence_score >= 0.65:
+            elif confidence_score >= 0.4:  # Was 0.65
                 confidence_color = "blue"
                 confidence_level = "High"
                 confidence_emoji = "🔵"
-            elif confidence_score >= 0.55:
+            elif confidence_score >= 0.2:  # Was 0.55
                 confidence_color = "orange"
                 confidence_level = "Moderate"
                 confidence_emoji = "🟡"
@@ -128,13 +161,13 @@ def main():
                 </div>
                 """, unsafe_allow_html=True)
             
-            # Confidence interpretation
+            # Confidence interpretation with adjusted thresholds
             st.subheader("💡 Decision Support")
-            if confidence_score >= 0.8:
+            if confidence_score >= 0.6:
                 st.success("**Highly reliable prediction** - You can trust this result with high confidence.")
-            elif confidence_score >= 0.65:
+            elif confidence_score >= 0.4:
                 st.info("**Good prediction reliability** - This result is quite trustworthy for decision-making.")
-            elif confidence_score >= 0.55:
+            elif confidence_score >= 0.2:
                 st.warning("**Moderate reliability** - Consider additional factors or expert opinion before making critical decisions.")
             else:
                 st.error("**Low confidence prediction** - This result is uncertain. Recommend seeking expert evaluation or additional testing.")
@@ -150,14 +183,21 @@ def main():
                 st.metric("Very Good (≥7)", f"{prob_very_good:.1%}")
                 st.progress(prob_very_good)
             
+            # Show the actual probabilities for transparency
+            st.caption(f"Raw probabilities: Not Good = {prob_not_good:.3f}, Very Good = {prob_very_good:.3f}")
+            
             # Additional decision-making context
             with st.expander("🤔 How to Interpret This Confidence Score"):
                 st.markdown("""
                 **Confidence Score Explanation:**
-                - **80-100%**: Very High Confidence - The model is very certain about its prediction
-                - **65-79%**: High Confidence - The model is quite confident, good for most decisions
-                - **55-64%**: Moderate Confidence - The prediction has some uncertainty
-                - **Below 55%**: Low Confidence - The model is uncertain, consider additional evaluation
+                - **60-100%**: Very High Confidence - The model is very certain about its prediction
+                - **40-59%**: High Confidence - The model is quite confident, good for most decisions
+                - **20-39%**: Moderate Confidence - The prediction has some uncertainty
+                - **Below 20%**: Low Confidence - The model is very uncertain, close to a coin flip
+                
+                **Confidence Calculation:**
+                This confidence score measures how far the prediction is from being uncertain (50/50). 
+                A 90% "Very Good" prediction has higher confidence than a 60% "Very Good" prediction.
                 
                 **For Wine Quality Decisions:**
                 - **High confidence "Very Good"**: Excellent choice for special occasions or recommendations
