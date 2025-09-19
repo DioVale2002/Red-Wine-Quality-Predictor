@@ -17,10 +17,9 @@ def load_model():
 # Load any preprocessors if you have them
 @st.cache_resource
 def load_preprocessor():
-    # Example for a scaler
-    # scaler = joblib.load('scaler.pkl')
-    # return scaler
-    return None
+    scaler = joblib.load('scaler.pkl')
+    return scaler
+
 
 # Main app
 def main():
