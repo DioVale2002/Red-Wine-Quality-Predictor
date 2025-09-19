@@ -17,9 +17,16 @@ def load_model():
 # Load any preprocessors if you have them
 @st.cache_resource
 def load_preprocessor():
-    scaler = joblib.load('scaler.pkl')
-    return scaler
-
+    try:
+        # Try to load a scaler - adjust filename as needed
+        scaler = joblib.load('scaler.pkl')
+        return scaler
+    except FileNotFoundError:
+        st.warning("⚠️ No scaler file found. If your model was trained with scaling, please include 'scaler.pkl'")
+        return None
+    except Exception as e:
+        st.error(f"Error loading scaler: {str(e)}")
+        return None
 
 # Main app
 def main():
@@ -61,7 +68,14 @@ def main():
     
     # Apply preprocessing if you have it
     if preprocessor:
-        features = preprocessor.transform(features)
+        st.info("✅ Applying feature scaling...")
+        try:
+            features = preprocessor.transform(features)
+        except Exception as e:
+            st.error(f"Error applying scaler: {str(e)}")
+            st.stop()
+    else:
+        st.info("ℹ️ No preprocessing applied - using raw feature values")
     
     # Make prediction
     if st.button("🔮 Predict Wine Quality", type="primary"):
