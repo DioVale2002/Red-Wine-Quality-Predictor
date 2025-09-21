@@ -91,8 +91,17 @@ def main():
             # Get prediction probabilities
             if hasattr(model, 'predict_proba'):
                 prediction_proba = model.predict_proba(features)
-                prob_not_good = float(prediction_proba[0][0])  # Convert to float
-                prob_very_good = float(prediction_proba[0][1])  # Convert to float
+                
+                # Handle different return types (numpy array vs list)
+                if isinstance(prediction_proba, list):
+                    # If it's a list, take the first element
+                    proba_array = prediction_proba[0] if len(prediction_proba) > 0 else [0.5, 0.5]
+                    prob_not_good = float(proba_array[0])
+                    prob_very_good = float(proba_array[1])
+                else:
+                    # If it's a numpy array
+                    prob_not_good = float(prediction_proba[0][0])
+                    prob_very_good = float(prediction_proba[0][1])
             else:
                 # Fallback if model doesn't support predict_proba
                 prob_not_good = 0.5
@@ -121,7 +130,11 @@ def main():
                 st.info(f"📊 Quality score estimation error: {str(e)}")
             
             # Better confidence calculation: distance from decision boundary (0.5)
-            confidence_score = abs(prob_very_good - 0.5) * 2  # Scale to 0-1 range
+            try:
+                confidence_score = abs(prob_very_good - 0.5) * 2  # Scale to 0-1 range
+            except Exception as e:
+                st.error(f"Error calculating confidence: {str(e)}")
+                confidence_score = 0.5  # Default confidence
             
             # Display confidence score prominently
             st.subheader("🎯 Confidence Score")
@@ -199,9 +212,13 @@ def main():
             st.write(f"Model type: {type(model).__name__}")
             # Add more debug info
             try:
-                st.write(f"Model prediction output type: {type(model.predict(features))}")
+                pred_result = model.predict(features)
+                st.write(f"Model prediction output type: {type(pred_result)}")
+                st.write(f"Prediction result: {pred_result}")
                 if hasattr(model, 'predict_proba'):
-                    st.write(f"Model probability output type: {type(model.predict_proba(features))}")
+                    proba_result = model.predict_proba(features)
+                    st.write(f"Model probability output type: {type(proba_result)}")
+                    st.write(f"Probability result: {proba_result}")
             except Exception as debug_e:
                 st.write(f"Debug error: {str(debug_e)}")
     
