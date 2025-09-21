@@ -86,20 +86,35 @@ def main():
         try:
             # Make prediction - extract single values from arrays
             prediction = model.predict(features)
-            prediction_value = prediction[0]  # Extract single value
+            
+            # Handle different prediction formats
+            if prediction.ndim > 1:
+                # If it's 2D like [[0 1]], flatten it first
+                prediction_flat = prediction.flatten()
+                # Take the last value (assuming it's the main prediction)
+                prediction_value = int(prediction_flat[-1])
+            else:
+                # If it's 1D like [1], take first element
+                prediction_value = int(prediction[0])
             
             # Get prediction probabilities
             if hasattr(model, 'predict_proba'):
                 prediction_proba = model.predict_proba(features)
                 
-                # Handle different return types (numpy array vs list)
-                if isinstance(prediction_proba, list):
-                    # If it's a list, take the first element
-                    proba_array = prediction_proba[0] if len(prediction_proba) > 0 else [0.5, 0.5]
-                    prob_not_good = float(proba_array[0])
-                    prob_very_good = float(proba_array[1])
+                # Handle the specific format: [array([[0.6, 0.4]]), array([[0.4, 0.6]])]
+                if isinstance(prediction_proba, list) and len(prediction_proba) > 0:
+                    # Take the last array in the list (main prediction)
+                    main_proba = prediction_proba[-1]
+                    if hasattr(main_proba, 'shape') and main_proba.ndim > 1:
+                        # If it's 2D, take first row
+                        prob_not_good = float(main_proba[0][0])
+                        prob_very_good = float(main_proba[0][1])
+                    else:
+                        # If it's 1D
+                        prob_not_good = float(main_proba[0])
+                        prob_very_good = float(main_proba[1])
                 else:
-                    # If it's a numpy array
+                    # Fallback for standard numpy array format
                     prob_not_good = float(prediction_proba[0][0])
                     prob_very_good = float(prediction_proba[0][1])
             else:
