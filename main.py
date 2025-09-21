@@ -37,8 +37,12 @@ def main():
     st.info("This model predicts wine quality based on 11 chemical properties. Enter the values below to get a prediction.")
     
     # Load model
-    model = load_model()
-    preprocessor = load_preprocessor()  # Optional
+    try:
+        model = load_model()
+        preprocessor = load_preprocessor()  # Optional
+    except Exception as e:
+        st.error(f"❌ Error loading model: {str(e)}")
+        st.stop()
     
     # Wine Quality Features Input
     st.subheader("Wine Chemical Properties")
@@ -67,7 +71,7 @@ def main():
                          pH, sulphates, alcohol]])
     
     # Apply preprocessing if you have it
-    if preprocessor:
+    if preprocessor is not None:
         st.info("✅ Applying feature scaling...")
         try:
             features = preprocessor.transform(features)
@@ -80,13 +84,25 @@ def main():
     # Make prediction
     if st.button("🔮 Predict Wine Quality", type="primary"):
         try:
+            # Make prediction - extract single values from arrays
             prediction = model.predict(features)
-            prediction_proba = model.predict_proba(features)
+            prediction_value = prediction[0]  # Extract single value
+            
+            # Get prediction probabilities
+            if hasattr(model, 'predict_proba'):
+                prediction_proba = model.predict_proba(features)
+                prob_not_good = float(prediction_proba[0][0])  # Convert to float
+                prob_very_good = float(prediction_proba[0][1])  # Convert to float
+            else:
+                # Fallback if model doesn't support predict_proba
+                prob_not_good = 0.5
+                prob_very_good = 0.5
+                st.warning("⚠️ Model doesn't support probability predictions. Using default values.")
             
             st.subheader("🎯 Prediction Results")
             
             # Display prediction with styling
-            if prediction[0] == 1:
+            if prediction_value == 1:
                 st.success("🌟 **Very Good Wine** (Quality ≥ 7)")
                 quality_text = "Very Good"
             else:
@@ -95,21 +111,14 @@ def main():
             
             # Try to get actual quality score if model supports it
             try:
-                # Some models might have a predict method that gives actual scores
                 if hasattr(model, 'predict_proba') and hasattr(model, 'classes_'):
-                    # For binary classification, estimate quality score
-                    prob_very_good = prediction_proba[0][1]
                     # Estimate quality: if prob >= 0.5, quality likely 7+, else likely < 7
                     estimated_quality = 6.0 + (prob_very_good * 3.0)  # Scale between 6-9
                     st.info(f"📊 **Estimated Quality Score: {estimated_quality:.1f}/10**")
                 else:
                     st.info("📊 Quality score estimation not available for this model type")
-            except:
-                st.info("📊 Quality score estimation not available")
-            
-            # Recalculate confidence using a better method
-            prob_not_good = prediction_proba[0][0]
-            prob_very_good = prediction_proba[0][1]
+            except Exception as e:
+                st.info(f"📊 Quality score estimation error: {str(e)}")
             
             # Better confidence calculation: distance from decision boundary (0.5)
             confidence_score = abs(prob_very_good - 0.5) * 2  # Scale to 0-1 range
@@ -145,6 +154,14 @@ def main():
                 </div>
                 """, unsafe_allow_html=True)
             
+            # Display probability details
+            st.subheader("📊 Probability Breakdown")
+            col1, col2 = st.columns(2)
+            with col1:
+                st.metric("Not Good Wine", f"{prob_not_good:.1%}")
+            with col2:
+                st.metric("Very Good Wine", f"{prob_very_good:.1%}")
+            
             # Confidence interpretation with adjusted thresholds
             st.subheader("💡 Decision Support")
             if confidence_score >= 0.6:
@@ -155,7 +172,6 @@ def main():
                 st.warning("**Moderate reliability** - Consider additional factors or expert opinion before making critical decisions.")
             else:
                 st.error("**Low confidence prediction** - This result is uncertain. Recommend seeking expert evaluation or additional testing.")
-            
             
             # Additional decision-making context
             with st.expander("🤔 How to Interpret This Confidence Score"):
@@ -178,26 +194,38 @@ def main():
                 
         except Exception as e:
             st.error(f"❌ Error making prediction: {str(e)}")
-            st.write("Please check that your model file is in the correct location and format.")
+            st.write("Debug information:")
+            st.write(f"Features shape: {features.shape}")
+            st.write(f"Model type: {type(model).__name__}")
+            # Add more debug info
+            try:
+                st.write(f"Model prediction output type: {type(model.predict(features))}")
+                if hasattr(model, 'predict_proba'):
+                    st.write(f"Model probability output type: {type(model.predict_proba(features))}")
+            except Exception as debug_e:
+                st.write(f"Debug error: {str(debug_e)}")
     
     # Optional: Display model information
     with st.expander("🔍 Model Information"):
-        st.write(f"**Model Type:** {type(model).__name__}")
-        if hasattr(model, 'n_estimators'):
-            st.write(f"**Number of Trees:** {model.n_estimators}")
-        if hasattr(model, 'feature_importances_'):
-            st.write("**Feature Importances:**")
-            importances = model.feature_importances_
-            feature_names = ['Fixed Acidity', 'Volatile Acidity', 'Citric Acid', 'Residual Sugar',
-                           'Chlorides', 'Free Sulfur Dioxide', 'Total Sulfur Dioxide', 'Density',
-                           'pH', 'Sulphates', 'Alcohol']
-            importance_df = pd.DataFrame({
-                'Feature': feature_names,
-                'Importance': importances
-            }).sort_values('Importance', ascending=False)
-            
-            # Display as a bar chart
-            st.bar_chart(importance_df.set_index('Feature'))
+        try:
+            st.write(f"**Model Type:** {type(model).__name__}")
+            if hasattr(model, 'n_estimators'):
+                st.write(f"**Number of Trees:** {model.n_estimators}")
+            if hasattr(model, 'feature_importances_'):
+                st.write("**Feature Importances:**")
+                importances = model.feature_importances_
+                feature_names = ['Fixed Acidity', 'Volatile Acidity', 'Citric Acid', 'Residual Sugar',
+                               'Chlorides', 'Free Sulfur Dioxide', 'Total Sulfur Dioxide', 'Density',
+                               'pH', 'Sulphates', 'Alcohol']
+                importance_df = pd.DataFrame({
+                    'Feature': feature_names,
+                    'Importance': importances
+                }).sort_values('Importance', ascending=False)
+                
+                # Display as a bar chart
+                st.bar_chart(importance_df.set_index('Feature'))
+        except Exception as e:
+            st.write(f"Error displaying model information: {str(e)}")
 
 if __name__ == "__main__":
     main()
